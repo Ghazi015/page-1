@@ -1,0 +1,186 @@
+/* ==========================================================================
+   LOADER.CSS — falling notebook → zoom → cover opens → page becomes the hero
+   ========================================================================== */
+
+.loader {
+  position: fixed; inset: 0; z-index: 100;
+  display: grid; place-items: center;
+  overflow: hidden;
+  color: #1a1612;
+}
+
+/* Paper backdrop matching the notebook photo (off-white studio sweep) */
+.loader__paper {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(120% 80% at 50% 45%, #fdfdfc 0%, #f4f3f1 55%, #e4e2de 100%);
+}
+.loader__paper::after {
+  /* soft floor line where the book lands */
+  content: ""; position: absolute; left: 0; right: 0; top: 50%;
+  height: 50%;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.035), transparent 40%);
+}
+
+/* ---------- Counter & brand ------------------------------------------- */
+.loader__meta {
+  position: absolute; inset: auto var(--gutter) calc(var(--gutter) + env(safe-area-inset-bottom)) var(--gutter);
+  display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 0.6rem 2rem;
+  z-index: 3;
+}
+.loader__brand { font-family: var(--f-display); font-size: clamp(1.4rem, 1rem + 1.5vw, 2.2rem); font-weight: 600; letter-spacing: 0.08em; color: #7a5a2a; }
+.loader__brand em { font-weight: 400; letter-spacing: 0; }
+.loader__count {
+  grid-row: span 2;
+  font-family: var(--f-display); font-weight: 300;
+  font-size: clamp(4rem, 2rem + 9vw, 10rem); line-height: 0.8;
+  font-variant-numeric: tabular-nums; color: #1a1612;
+}
+.loader__count sup { font-size: 0.3em; vertical-align: top; margin-left: 0.1em; color: #b9853f; }
+.loader__bar { grid-column: 1; height: 1px; background: rgba(26, 22, 18, 0.12); overflow: hidden; }
+.loader__bar span { display: block; height: 100%; background: linear-gradient(90deg, #b9853f, #f5c97b); transform-origin: 0 50%; transform: scaleX(0); }
+.loader__quote { grid-column: 1 / -1; font-family: var(--f-display); font-style: italic; font-size: var(--fs-md); color: rgba(26, 22, 18, 0.55); }
+
+/* ---------- 3D scene --------------------------------------------------- */
+.loader__scene {
+  position: relative; z-index: 2;
+  display: grid; place-items: center;
+  width: 100%; height: 100%;
+  perspective: 2200px;
+  will-change: transform;
+}
+
+/* Book dimensions derived from the cropped cover (418 × 604) */
+.lb {
+  --bw: min(40vw, 27vh);
+  --bh: calc(var(--bw) * 1.445);
+  position: relative;
+  width: var(--bw); height: var(--bh);
+  transform-style: preserve-3d;
+  visibility: hidden; /* shown when it starts falling */
+  will-change: transform;
+}
+.lb__shadow {
+  position: absolute; left: -12%; right: -12%; bottom: -7%; height: 12%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.18) 55%, transparent);
+  filter: blur(6px);
+  transform: translateZ(-1px);
+  opacity: 0;
+}
+.lb__body { position: absolute; inset: 0; transform-style: preserve-3d; }
+
+/* Page stack thickness (visible on the right & bottom edges) */
+.lb__block {
+  position: absolute; inset: 1.2% -1.6% -1.4% 1%;
+  border-radius: 2px 6px 6px 2px;
+  background:
+    repeating-linear-gradient(90deg, #efe9dc 0 1px, #d9d1c1 1px 2px),
+    #eee7d8;
+  box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.35);
+  transform: translateZ(-2px);
+}
+
+/* First page — shows photo 4 (the hero) */
+.lb__page {
+  position: absolute; inset: 1.4% 1.2% 1.4% 0.4%;
+  overflow: hidden;
+  border-radius: 1px 4px 4px 1px;
+  background: #07070b;
+  transform: translateZ(-1px);
+  box-shadow: inset 18px 0 30px -12px rgba(0, 0, 0, 0.8);
+}
+.lb__page img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 50%; transform: scale(1.35); }
+.lb__page-glow {
+  position: absolute; inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 220, 150, 0.85), rgba(255, 190, 90, 0.25) 30%, transparent 60%);
+  mix-blend-mode: screen;
+  opacity: 0;
+}
+.lb__page-label {
+  position: absolute; left: 50%; bottom: 7%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: var(--f-mono); font-size: 0.5rem; letter-spacing: 0.2em; text-transform: uppercase;
+  color: rgba(255, 232, 184, 0.8);
+}
+
+/* Front cover — hinged on the left (spiral side) */
+.lb__cover {
+  position: absolute; inset: 0;
+  transform-origin: 0% 50%;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.lb__face {
+  position: absolute; inset: 0;
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  border-radius: 2px 6px 6px 2px;
+  overflow: hidden;
+}
+.lb__face--front { box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 20px 50px -18px rgba(0, 0, 0, 0.45); }
+.lb__face--front img { width: 100%; height: 100%; object-fit: cover; }
+.lb__sheen {
+  position: absolute; inset: -20%;
+  background: linear-gradient(115deg, transparent 38%, rgba(255, 255, 255, 0.55) 48%, transparent 58%);
+  transform: translateX(-70%);
+  mix-blend-mode: soft-light;
+}
+.lb__face--back {
+  transform: rotateY(180deg);
+  display: grid; place-items: center;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.12), transparent 12%),
+    radial-gradient(circle at 50% 40%, #fbf7ee, #efe6d3);
+  border: 1px solid rgba(185, 133, 63, 0.35);
+}
+.lb__exlibris {
+  text-align: center;
+  font-family: var(--f-display); font-style: italic; font-size: clamp(0.8rem, 2.4vh, 1.2rem); line-height: 1.3;
+  color: #9b7438;
+  padding: 1rem 1.4rem; border: 1px solid rgba(185, 133, 63, 0.45); outline: 1px solid rgba(185, 133, 63, 0.25); outline-offset: 5px;
+}
+.lb__exlibris b { font-style: normal; font-weight: 600; letter-spacing: 0.18em; }
+
+/* Spiral rings stay put while the cover rotates */
+.lb__rings {
+  position: absolute; top: 0; height: 100%;
+  left: calc(var(--bw) * -0.148); width: calc(var(--bw) * 0.177);
+  transform: translateZ(2px);
+  filter: drop-shadow(1px 2px 1px rgba(0, 0, 0, 0.3));
+  pointer-events: none;
+}
+
+/* Impact dust */
+.lb__dust { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; }
+.lb__dust span {
+  position: absolute; left: 0; top: 0;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(160, 140, 115, 0.55), transparent 70%);
+  opacity: 0;
+}
+
+/* ---------- Portal (page → full screen) ------------------------------ */
+.loader__portal {
+  position: fixed; inset: 0; z-index: 4;
+  visibility: hidden;
+  clip-path: inset(50% 50% 50% 50%);
+  background: #000;
+}
+
+/* ---------- Skip ------------------------------------------------------ */
+.loader__skip {
+  position: absolute; z-index: 6;
+  top: calc(1.2rem + env(safe-area-inset-top)); right: var(--gutter);
+  padding: 0.55rem 1rem; border-radius: 99px;
+  font-family: var(--f-mono); font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: rgba(26, 22, 18, 0.6); border: 1px solid rgba(26, 22, 18, 0.14);
+  transition: color 0.3s, background-color 0.3s, border-color 0.3s;
+}
+.loader__skip:hover { color: #1a1612; background: rgba(26, 22, 18, 0.06); }
+.loader.is-dark .loader__skip { color: rgba(255, 255, 255, 0.7); border-color: rgba(255, 255, 255, 0.2); }
+
+@media (max-width: 640px) {
+  .loader__meta { grid-template-columns: 1fr; }
+  .loader__count { grid-row: auto; order: -1; }
+}
