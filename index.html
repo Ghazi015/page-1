@@ -1,1 +1,662 @@
+<!doctype html>
+<html lang="en" class="is-loading" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>JOSC Gallery — A Library of Light</title>
+  <meta name="description" content="JOSC Gallery — a cinematic photo gallery. Albums: a collection of moments, a story in pictures, a life well-lived." />
+  <meta name="theme-color" content="#06060a" />
 
+  <!-- ─────────────────────────────────────────────────────────────
+       FONTS — Cormorant Garamond (display), Inter Tight (UI), JetBrains Mono (micro labels)
+       ───────────────────────────────────────────────────────────── -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter+Tight:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
+
+  <!-- Preload the first images the loader needs (book cover + hero page) -->
+  <link rel="preload" as="image" href="assets/img/book-cover.webp" />
+  <link rel="preload" as="image" href="assets/img/hero.webp" />
+
+  <!-- Lenis base CSS (smooth scroll helpers) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lenis@1.3.26/dist/lenis.css" />
+
+  <!-- Project CSS (split into small files → easy to edit in Acode) -->
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/loader.css" />
+  <link rel="stylesheet" href="css/world.css" />
+  <link rel="stylesheet" href="css/sections.css" />
+
+  <!-- ─────────────────────────────────────────────────────────────
+       LIBRARIES VIA CDN (no npm / no bundler)
+       GSAP + ScrollTrigger + Lenis are classic scripts → globals: gsap, ScrollTrigger, Lenis
+       Three.js is an ES module → mapped through the import map below
+       ───────────────────────────────────────────────────────────── -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/ScrollTrigger.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.3.26/dist/lenis.min.js" defer></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js"
+      }
+    }
+  </script>
+  <!-- Module scripts are deferred by default and run after the classic deferred scripts above -->
+  <script type="module" src="js/main.js"></script>
+</head>
+
+<body>
+  <a class="skip-link" href="#hero">Skip to content</a>
+
+  <!-- ═════════════════════════════════════════════════════════════
+       00 · LOADER — a notebook falls, the camera zooms, the cover opens,
+       and the first page (photo 4) becomes the hero.
+       ═════════════════════════════════════════════════════════════ -->
+  <div class="loader" id="loader" role="status" aria-live="polite" aria-label="Loading JOSC Gallery">
+    <div class="loader__paper" aria-hidden="true"></div>
+
+    <div class="loader__meta">
+      <p class="loader__brand">JOSC <em>Gallery</em></p>
+      <p class="loader__count"><span id="loaderCount">000</span><sup>%</sup></p>
+      <div class="loader__bar" aria-hidden="true"><span id="loaderBar"></span></div>
+      <p class="loader__quote">“A collection of moments, a story in pictures.”</p>
+    </div>
+
+    <div class="loader__scene" id="loaderScene" aria-hidden="true">
+      <div class="lb" id="lb">
+        <div class="lb__shadow"></div>
+        <div class="lb__body">
+          <div class="lb__block"></div>
+          <div class="lb__page">
+            <img src="assets/img/hero.webp" alt="" width="1920" height="1072" />
+            <div class="lb__page-glow"></div>
+            <span class="lb__page-label">Chapter 00 · Prologue</span>
+          </div>
+          <div class="lb__cover">
+            <div class="lb__face lb__face--front">
+              <img src="assets/img/book-cover.webp" alt="" width="418" height="604" />
+              <span class="lb__sheen"></span>
+            </div>
+            <div class="lb__face lb__face--back">
+              <span class="lb__exlibris">Ex Libris<br /><b>JOSC</b></span>
+            </div>
+          </div>
+          <img class="lb__rings" src="assets/img/book-rings.png" alt="" width="74" height="604" />
+        </div>
+      </div>
+      <div class="lb__dust" id="lbDust"></div>
+    </div>
+
+    <!-- The portal expands from the book page to full screen (seamless hand-off to the hero layer) -->
+    <div class="loader__portal" id="loaderPortal" aria-hidden="true">
+      <div class="cam">
+        <div class="stage" data-stage="portal" data-w="1920" data-h="1072" data-fx=".5" data-fy=".5">
+          <img src="assets/img/hero.webp" alt="" width="1920" height="1072" />
+        </div>
+      </div>
+      <div class="layer__vignette"></div>
+    </div>
+
+    <button class="loader__skip" id="loaderSkip" type="button">Skip intro <span aria-hidden="true">→</span></button>
+  </div>
+
+  <!-- ═════════════════════════════════════════════════════════════
+       WORLD — fixed cinematic backdrop. Every chapter image lives here as a
+       "layer"; scroll timelines (js/scroll.js) drive the transitions.
+       ═════════════════════════════════════════════════════════════ -->
+  <div class="world" id="world" aria-hidden="true">
+
+    <!-- LAYER · HERO (photo 4) + Three.js orbiting books -->
+    <div class="layer layer--hero" data-layer="hero">
+      <div class="cam" data-cam="hero">
+        <div class="stage" data-stage="hero" data-w="1920" data-h="1072" data-fx=".5" data-fy=".5">
+          <img class="stage__img" src="assets/img/hero-clean.webp" alt="" width="1920" height="1072" />
+          <img class="stage__img stage__orig" src="assets/img/hero.webp" alt="" width="1920" height="1072" />
+        </div>
+      </div>
+      <canvas class="hero-canvas" id="heroCanvas"></canvas>
+      <span class="hero-pulse"></span>
+      <div class="layer__vignette"></div>
+    </div>
+
+    <!-- LAYER · SUN (photo 2) — the rotating sun in her hand -->
+    <div class="layer layer--sun" data-layer="sun">
+      <div class="cam" data-cam="sun">
+        <div class="stage" data-stage="sun" data-w="1640" data-h="959" data-fx=".62" data-fy=".4" data-fx-m=".86" data-fy-m=".35">
+          <img class="stage__img" src="assets/img/sun.webp" alt="" width="1640" height="959" loading="lazy" />
+          <div class="hotspot coin" data-hotspot="coin" data-x=".898" data-y=".297" data-d=".1466">
+            <span class="coin__beams"></span>
+            <div class="coin__spin">
+              <span class="coin__rays coin__rays--a"></span>
+              <span class="coin__rays coin__rays--b"></span>
+              <span class="coin__corona"></span>
+            </div>
+            <span class="coin__glow"></span>
+            <span class="coin__shine"></span>
+          </div>
+        </div>
+      </div>
+      <div class="layer__vignette"></div>
+    </div>
+
+    <!-- LAYER · RED SUN CITY (photo 1) -->
+    <div class="layer layer--red" data-layer="red">
+      <div class="cam" data-cam="red">
+        <div class="stage" data-stage="red" data-w="1672" data-h="941" data-fx=".5" data-fy=".4">
+          <img class="stage__img" src="assets/img/red.webp" alt="" width="1672" height="941" loading="lazy" />
+          <div class="hotspot redsun" data-hotspot="redsun" data-x=".499" data-y=".311" data-d=".2936">
+            <span class="redsun__glow"></span>
+          </div>
+        </div>
+      </div>
+      <div class="red__hud">
+        <span class="red__hud-v"></span><span class="red__hud-h"></span>
+        <span class="red__hud-tag">35.0522° N · RED SUN CITY</span>
+      </div>
+      <svg class="red__tear red__tear--l" viewBox="0 0 600 160" preserveAspectRatio="none">
+        <path d="M0 40 L40 52 L70 38 L110 60 L150 48 L190 70 L230 58 L260 80 L300 66 L340 92 L380 80 L420 104 L460 94 L500 118 L540 110 L600 132 L600 160 L0 160 Z" />
+      </svg>
+      <svg class="red__tear red__tear--r" viewBox="0 0 600 160" preserveAspectRatio="none">
+        <path d="M0 128 L50 112 L90 118 L130 96 L170 104 L210 84 L250 90 L290 70 L330 78 L370 58 L410 64 L450 44 L490 52 L530 34 L570 40 L600 24 L600 160 L0 160 Z" />
+      </svg>
+    </div>
+
+    <!-- LAYER · HANAMI (photo 3) -->
+    <div class="layer layer--sakura" data-layer="sakura">
+      <div class="cam" data-cam="sakura">
+        <div class="stage" data-stage="sakura" data-w="1672" data-h="941" data-fx=".42" data-fy=".35" data-fx-m=".3" data-fy-m=".35">
+          <img class="stage__img" src="assets/img/sakura.webp" alt="" width="1672" height="941" loading="lazy" />
+        </div>
+      </div>
+      <div class="layer__veil"></div>
+    </div>
+
+    <!-- LAYER · THE ALBUM (photo 5) -->
+    <div class="layer layer--album" data-layer="album">
+      <div class="cam" data-cam="album">
+        <div class="stage" data-stage="album" data-w="1376" data-h="768" data-fx=".5" data-fy=".5">
+          <img class="stage__img" src="assets/img/album.webp" alt="" width="1376" height="768" loading="lazy" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Transition FX (each element is owned by exactly one timeline) -->
+    <div class="fx-strips" id="fxStrips"></div>
+    <div class="fx-flash fx-flash--gold"></div>
+    <div class="fx-disk" id="fxDisk"><span class="fx-disk__red"></span></div>
+    <span class="fx-cut"></span>
+    <div class="fx-leak"></div>
+    <div class="fx-bloom"></div>
+    <div class="fx-white"></div>
+    <div class="fx-birds" id="fxBirds">
+      <svg viewBox="0 0 40 16"><path d="M0 8 Q10 0 20 8 Q30 0 40 8" /></svg>
+      <svg viewBox="0 0 40 16"><path d="M0 8 Q10 0 20 8 Q30 0 40 8" /></svg>
+      <svg viewBox="0 0 40 16"><path d="M0 8 Q10 0 20 8 Q30 0 40 8" /></svg>
+      <svg viewBox="0 0 40 16"><path d="M0 8 Q10 0 20 8 Q30 0 40 8" /></svg>
+      <svg viewBox="0 0 40 16"><path d="M0 8 Q10 0 20 8 Q30 0 40 8" /></svg>
+      <svg viewBox="0 0 40 16"><path d="M0 8 Q10 0 20 8 Q30 0 40 8" /></svg>
+      <svg viewBox="0 0 40 16"><path d="M0 8 Q10 0 20 8 Q30 0 40 8" /></svg>
+    </div>
+    <canvas class="fx-petals" id="petalCanvas"></canvas>
+
+    <!-- Chapter captions shown mid-transition -->
+    <div class="fx-caption" data-cap="1">
+      <span class="fx-caption__no">Chapter I</span>
+      <span class="fx-caption__title">Golden <em>Hour</em></span>
+    </div>
+    <div class="fx-caption" data-cap="2">
+      <span class="fx-caption__no">Chapter II</span>
+      <span class="fx-caption__title">Red Sun <em>City</em></span>
+    </div>
+    <div class="fx-caption fx-caption--dark" data-cap="3">
+      <span class="fx-caption__kanji">花見</span>
+      <span class="fx-caption__no">Chapter III</span>
+      <span class="fx-caption__title"><em>Hanami</em></span>
+    </div>
+    <div class="fx-caption fx-caption--dark" data-cap="4">
+      <span class="fx-caption__no">Chapter IV</span>
+      <span class="fx-caption__title">The <em>Album</em></span>
+    </div>
+
+    <div class="world__grain"></div>
+  </div>
+
+  <!-- ═════════════════════════════════════════════════════════════
+       NAVIGATION
+       ═════════════════════════════════════════════════════════════ -->
+  <header class="nav" id="nav">
+    <a class="nav__brand" href="#hero" data-scroll aria-label="JOSC Gallery — back to top">
+      <span class="nav__mark" aria-hidden="true">J</span>
+      <span class="nav__word">JOSC <em>Gallery</em></span>
+    </a>
+
+    <nav class="nav__chapters" aria-label="Chapters">
+      <ol>
+        <li><a href="#hero" data-scroll data-nav="0"><i>00</i>Prologue</a></li>
+        <li><a href="#golden" data-scroll data-nav="1"><i>01</i>Golden Hour</a></li>
+        <li><a href="#redsun" data-scroll data-nav="2"><i>02</i>Red Sun</a></li>
+        <li><a href="#hanami" data-scroll data-nav="3"><i>03</i>Hanami</a></li>
+        <li><a href="#album" data-scroll data-nav="4"><i>04</i>Album</a></li>
+      </ol>
+    </nav>
+
+    <div class="nav__right">
+      <span class="nav__clock" id="navClock" aria-label="Local time in Bangil">WIB --:--</span>
+      <a class="btn btn--pill" href="#contact" data-scroll data-magnetic><span>Let’s talk</span></a>
+      <button class="nav__menu" id="menuBtn" type="button" aria-expanded="false" aria-controls="menu">
+        <span class="nav__menu-lines" aria-hidden="true"><i></i><i></i></span>
+        <span class="nav__menu-label">Index</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Full-screen index menu (mainly for mobile) -->
+  <div class="menu" id="menu" hidden>
+    <ol class="menu__list">
+      <li><a href="#hero" data-scroll><i>00</i><span>Prologue</span></a></li>
+      <li><a href="#golden" data-scroll><i>01</i><span>Golden Hour</span></a></li>
+      <li><a href="#redsun" data-scroll><i>02</i><span>Red Sun City</span></a></li>
+      <li><a href="#hanami" data-scroll><i>03</i><span>Hanami</span></a></li>
+      <li><a href="#album" data-scroll><i>04</i><span>The Album</span></a></li>
+    </ol>
+    <p class="menu__foot">Bangil, East Java — <a href="mailto:hello@joscgallery.com">hello@joscgallery.com</a></p>
+  </div>
+
+  <!-- Reading progress (right edge) -->
+  <div class="progress" aria-hidden="true">
+    <span class="progress__label" id="progressLabel">00</span>
+    <span class="progress__track"><span class="progress__bar" id="progressBar"></span></span>
+    <span class="progress__label">04</span>
+  </div>
+
+  <!-- Custom cursor (desktop / fine pointer only) -->
+  <div class="cursor" id="cursor" aria-hidden="true">
+    <span class="cursor__dot"></span>
+    <span class="cursor__ring"><span class="cursor__label">View</span></span>
+  </div>
+
+  <!-- ═════════════════════════════════════════════════════════════
+       CONTENT — scrolls over the fixed world
+       ═════════════════════════════════════════════════════════════ -->
+  <main id="content">
+
+    <!-- ── 00 · PROLOGUE / HERO — bio & information only ───────────── -->
+    <section class="hero" id="hero" data-chapter="0" aria-labelledby="heroTitle">
+      <div class="hero__inner container">
+        <div class="hero__top">
+          <p class="eyebrow" data-intro><span class="eyebrow__dot"></span>Chapter 00 — Prologue</p>
+          <p class="hero__coords mono" data-intro>7.60° S · 112.78° E</p>
+        </div>
+
+        <h1 class="hero__title" id="heroTitle" data-split>
+          <span class="hero__line">The Library</span>
+          <span class="hero__line hero__line--indent">of <em>Light</em></span>
+        </h1>
+
+        <div class="hero__grid">
+          <div class="hero__intro">
+            <p class="hero__lede" data-intro>
+              I’m <strong>Josc</strong> — a visual storyteller from East Java who collects light the way
+              others collect books. Every frame here is a page; every album, a chapter of a life well-lived.
+            </p>
+            <div class="hero__ctas" data-intro>
+              <a class="btn btn--primary" href="#golden" data-scroll data-magnetic>
+                <span>Begin reading</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16m0 0l-6-6m6 6l6-6" /></svg>
+              </a>
+              <a class="btn btn--ghost" href="#contact" data-scroll data-magnetic><span>Commission a story</span></a>
+            </div>
+          </div>
+
+          <aside class="bio glass" aria-label="Photographer profile" data-intro-card>
+            <div class="bio__head">
+              <img class="bio__avatar" src="assets/img/cards/k1.webp" alt="Portrait of Josc" width="468" height="470" />
+              <div class="bio__who">
+                <p class="bio__name">Josc</p>
+                <p class="bio__role">Photographer &amp; Visual Curator</p>
+              </div>
+              <span class="bio__status"><i></i>Available</span>
+            </div>
+            <dl class="bio__list">
+              <div><dt>Based in</dt><dd>Bangil, East Java — ID</dd></div>
+              <div><dt>Focus</dt><dd>Portrait · Fantasy · Street</dd></div>
+              <div><dt>Toolkit</dt><dd>Lens, light &amp; a little magic</dd></div>
+              <div><dt>Local time</dt><dd id="bioClock">—</dd></div>
+            </dl>
+            <ul class="bio__social">
+              <li><a href="https://instagram.com" target="_blank" rel="noopener" data-magnetic>Instagram</a></li>
+              <li><a href="https://behance.net" target="_blank" rel="noopener" data-magnetic>Behance</a></li>
+              <li><a href="mailto:hello@joscgallery.com" data-magnetic>Email</a></li>
+            </ul>
+          </aside>
+        </div>
+
+        <div class="hero__bottom">
+          <ul class="hero__stats" data-intro>
+            <li><strong data-count="4">0</strong><span>Chapters</span></li>
+            <li><strong data-count="128">0</strong><span>Frames</span></li>
+            <li><strong data-count="7">0</strong><span>Years of light</span></li>
+          </ul>
+          <div class="scroll-cue" data-intro>
+            <span class="scroll-cue__text">Scroll to turn the page</span>
+            <span class="scroll-cue__line"><i></i></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Transition spacer: Hero → Golden Hour (dive into the light, emerge from her hand) -->
+    <div class="transit transit--1" id="t1" aria-hidden="true"></div>
+
+    <!-- ── 01 · GOLDEN HOUR (photo 2) ─────────────────────────────── -->
+    <section class="chapter chapter--sun" id="golden" data-chapter="1" aria-labelledby="goldenTitle">
+      <div class="container">
+        <header class="chapter__head">
+          <p class="eyebrow"><span class="eyebrow__dot"></span>Chapter I — Golden Hour</p>
+          <h2 class="chapter__title" id="goldenTitle" data-split>High <em>Table</em></h2>
+          <p class="chapter__lede">Portraits bathed in borrowed sunlight — where every glint is a promise and every gaze is a wager.</p>
+          <p class="chapter__count mono">06 frames · 2026</p>
+        </header>
+
+        <div class="bento">
+          <figure class="card bento__a" data-cursor="view">
+            <button class="card__media" type="button" aria-label="Open photo: The Wager">
+              <img src="assets/img/cards/s1.webp" alt="Silver-haired woman smiling in golden light" width="460" height="556" loading="lazy" decoding="async" />
+              <span class="card__glare" aria-hidden="true"></span>
+            </button>
+            <figcaption class="card__cap"><span class="card__no">01</span><span class="card__title">The Wager</span><span class="card__meta">Portrait · 2026</span></figcaption>
+          </figure>
+
+          <figure class="card bento__b" data-cursor="view">
+            <button class="card__media" type="button" aria-label="Open photo: Sun in Hand">
+              <img src="assets/img/cards/s2.webp" alt="A hand balancing a glowing golden coin" width="460" height="816" loading="lazy" decoding="async" />
+              <span class="card__glare" aria-hidden="true"></span>
+            </button>
+            <figcaption class="card__cap"><span class="card__no">02</span><span class="card__title">Sun in Hand</span><span class="card__meta">Detail · 2026</span></figcaption>
+          </figure>
+
+          <figure class="card bento__c" data-cursor="view">
+            <button class="card__media" type="button" aria-label="Open photo: High Table Coin">
+              <img src="assets/img/cards/s3.webp" alt="Close-up of a golden High Table coin with a crowned skull" width="361" height="365" loading="lazy" decoding="async" />
+              <span class="card__glare" aria-hidden="true"></span>
+            </button>
+            <figcaption class="card__cap"><span class="card__no">03</span><span class="card__title">High Table Coin</span><span class="card__meta">Macro · 2026</span></figcaption>
+          </figure>
+
+          <figure class="card bento__d" data-cursor="view">
+            <button class="card__media" type="button" aria-label="Open photo: Golden Chain">
+              <img src="assets/img/cards/s4.webp" alt="Brooch and gold chain on a white textured suit" width="525" height="460" loading="lazy" decoding="async" />
+              <span class="card__glare" aria-hidden="true"></span>
+            </button>
+            <figcaption class="card__cap"><span class="card__no">04</span><span class="card__title">Golden Chain</span><span class="card__meta">Texture · 2026</span></figcaption>
+          </figure>
+
+          <figure class="card bento__e" data-cursor="view">
+            <button class="card__media" type="button" aria-label="Open photo: Sparks">
+              <img src="assets/img/cards/s5.webp" alt="Golden sparks scattering across a deep blue sky" width="656" height="479" loading="lazy" decoding="async" />
+              <span class="card__glare" aria-hidden="true"></span>
+            </button>
+            <figcaption class="card__cap"><span class="card__no">05</span><span class="card__title">Sparks</span><span class="card__meta">Atmosphere · 2026</span></figcaption>
+          </figure>
+
+          <figure class="card bento__f" data-cursor="view">
+            <button class="card__media" type="button" aria-label="Open photo: Golden Hour, full frame">
+              <img src="assets/img/cards/s6.webp" alt="Full frame: woman in a white suit pointing at a golden coin" width="1100" height="643" loading="lazy" decoding="async" />
+              <span class="card__glare" aria-hidden="true"></span>
+            </button>
+            <figcaption class="card__cap"><span class="card__no">06</span><span class="card__title">Golden Hour</span><span class="card__meta">Full frame · 2026</span></figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- Transition spacer: Golden Hour → Red Sun City (the golden sun becomes the red sun) -->
+    <div class="transit transit--2" id="t2" aria-hidden="true"></div>
+
+    <!-- ── 02 · RED SUN CITY (photo 1) ────────────────────────────── -->
+    <section class="chapter chapter--red" id="redsun" data-chapter="2" aria-labelledby="redTitle">
+      <div class="container">
+        <header class="chapter__head chapter__head--split">
+          <div>
+            <p class="eyebrow"><span class="eyebrow__dot"></span>Chapter II — Red Sun City</p>
+            <h2 class="chapter__title" id="redTitle" data-split>Torn <em>Postcards</em></h2>
+          </div>
+          <div>
+            <p class="chapter__lede">A collage of skylines, stray petals and a corgi that stole the show. Paper, ink and a sun that refuses to set.</p>
+            <p class="chapter__count mono">06 frames · Collage series</p>
+          </div>
+        </header>
+
+        <div class="collage">
+          <div class="collage__item collage__item--1" data-speed="0.12">
+            <figure class="card card--paper" data-cursor="view">
+              <span class="card__tape" aria-hidden="true"></span>
+              <button class="card__media" type="button" aria-label="Open photo: Face the Sun">
+                <img src="assets/img/cards/r1.webp" alt="Profile of a silver-haired woman against a red sun" width="535" height="527" loading="lazy" decoding="async" />
+                <span class="card__glare" aria-hidden="true"></span>
+              </button>
+              <figcaption class="card__cap"><span class="card__no">07</span><span class="card__title">Face the Sun</span><span class="card__meta">Portrait</span></figcaption>
+            </figure>
+          </div>
+
+          <div class="collage__item collage__item--2" data-speed="-0.08">
+            <figure class="card card--paper" data-cursor="view">
+              <span class="card__tape" aria-hidden="true"></span>
+              <button class="card__media" type="button" aria-label="Open photo: Good Boy">
+                <img src="assets/img/cards/r2.webp" alt="A smiling corgi printed on a black jacket" width="351" height="377" loading="lazy" decoding="async" />
+                <span class="card__glare" aria-hidden="true"></span>
+              </button>
+              <figcaption class="card__cap"><span class="card__no">08</span><span class="card__title">Good Boy</span><span class="card__meta">Detail</span></figcaption>
+            </figure>
+          </div>
+
+          <div class="collage__item collage__item--3" data-speed="0.18">
+            <figure class="card card--paper" data-cursor="view">
+              <span class="card__tape" aria-hidden="true"></span>
+              <button class="card__media" type="button" aria-label="Open photo: Downtown Haze">
+                <img src="assets/img/cards/r3.webp" alt="Hazy downtown skyline with tall towers" width="668" height="414" loading="lazy" decoding="async" />
+                <span class="card__glare" aria-hidden="true"></span>
+              </button>
+              <figcaption class="card__cap"><span class="card__no">09</span><span class="card__title">Downtown Haze</span><span class="card__meta">Street</span></figcaption>
+            </figure>
+          </div>
+
+          <div class="collage__item collage__item--4" data-speed="-0.14">
+            <figure class="card card--paper" data-cursor="view">
+              <span class="card__tape" aria-hidden="true"></span>
+              <button class="card__media" type="button" aria-label="Open photo: Red Blossom">
+                <img src="assets/img/cards/r4.webp" alt="Red cherry blossom branch on paper texture" width="619" height="338" loading="lazy" decoding="async" />
+                <span class="card__glare" aria-hidden="true"></span>
+              </button>
+              <figcaption class="card__cap"><span class="card__no">10</span><span class="card__title">Red Blossom</span><span class="card__meta">Still life</span></figcaption>
+            </figure>
+          </div>
+
+          <div class="collage__item collage__item--5" data-speed="0.06">
+            <figure class="card card--paper" data-cursor="view">
+              <span class="card__tape" aria-hidden="true"></span>
+              <button class="card__media" type="button" aria-label="Open photo: Bay Bridge">
+                <img src="assets/img/cards/r5.webp" alt="City blocks stretching toward a suspension bridge" width="669" height="395" loading="lazy" decoding="async" />
+                <span class="card__glare" aria-hidden="true"></span>
+              </button>
+              <figcaption class="card__cap"><span class="card__no">11</span><span class="card__title">Bay Bridge</span><span class="card__meta">Cityscape</span></figcaption>
+            </figure>
+          </div>
+
+          <div class="collage__item collage__item--6" data-speed="-0.1">
+            <figure class="card card--paper" data-cursor="view">
+              <span class="card__tape" aria-hidden="true"></span>
+              <button class="card__media" type="button" aria-label="Open photo: Red Sun City, full frame">
+                <img src="assets/img/cards/r6.webp" alt="Full collage: woman before a red sun above a city" width="1100" height="619" loading="lazy" decoding="async" />
+                <span class="card__glare" aria-hidden="true"></span>
+              </button>
+              <figcaption class="card__cap"><span class="card__no">12</span><span class="card__title">Red Sun City</span><span class="card__meta">Full frame</span></figcaption>
+            </figure>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Transition spacer: Red Sun City → Hanami (the paper tears, a petal storm blows through) -->
+    <div class="transit transit--3" id="t3" aria-hidden="true"></div>
+
+    <!-- ── 03 · HANAMI (photo 3) — horizontal gallery ─────────────── -->
+    <section class="chapter chapter--sakura" id="hanami" data-chapter="3" aria-labelledby="sakuraTitle">
+      <div class="hscroll" id="hscroll">
+        <div class="hscroll__track" id="hscrollTrack">
+          <header class="hscroll__intro">
+            <p class="eyebrow"><span class="eyebrow__dot"></span>Chapter III — Hanami</p>
+            <h2 class="chapter__title" id="sakuraTitle" data-split>Where petals <em>fall</em></h2>
+            <p class="chapter__lede">Soft light, white coats and the brief, loud poetry of spring. Drag or scroll sideways through the blossoms.</p>
+            <p class="chapter__count mono">06 frames · Spring 2026</p>
+          </header>
+
+          <figure class="card card--glass hcard hcard--tall" data-cursor="view">
+            <button class="card__media" type="button" aria-label="Open photo: Blue Gaze">
+              <img src="assets/img/cards/k1.webp" alt="Close-up of a woman with pale blue eyes looking up" width="468" height="470" loading="lazy" decoding="async" />
+              <span class="card__glare" aria-hidden="true"></span>
+            </button>
+            <figcaption class="card__cap"><span class="card__no">13</span><span class="card__title">Blue Gaze</span><span class="card__meta">Portrait</span></figcaption>
+          </figure>
+
+          <figure class="card card--glass hcard" data-cursor="view">
+            <button class="card__media" type="button" aria-label="Open photo: Messenger">
+              <img src="assets/img/cards/k2.webp" alt="A white dove in flight" width="418" height="376" loading="lazy" decoding="async" />
+              <span class="card__glare" aria-hidden="true"></span>
+            </button>
+            <figcaption class="card__cap"><span class="card__no">14</span><span class="card__title">Messenger</span><span class="card__meta">Wildlife</span></figcaption>
+          </figure>
+
+          <figure class="card card--glass hcard hcard--tall" data-cursor="view">
+            <button class="card__media" type="button" aria-label="Open photo: Full Bloom">
+              <img src="assets/img/cards/k3.webp" alt="Dense pink cherry blossoms on dark branches" width="469" height="489" loading="lazy" decoding="async" />
+              <span class="card__glare" aria-hidden="true"></span>
+            </button>
+            <figcaption class="card__cap"><span class="card__no">15</span><span class="card__title">Full Bloom</span><span class="card__meta">Nature</span></figcaption>
+          </figure>
+
+          <figure class="card card--glass hcard" data-cursor="view">
+            <button class="card__media" type="button" aria-label="Open photo: Silver Chain">
+              <img src="assets/img/cards/k4.webp" alt="White high-collar coat with a silver chain" width="602" height="546" loading="lazy" decoding="async" />
+              <span class="card__glare" aria-hidden="true"></span>
+            </button>
+            <figcaption class="card__cap"><span class="card__no">16</span><span class="card__title">Silver Chain</span><span class="card__meta">Fashion</span></figcaption>
+          </figure>
+
+          <figure class="card card--glass hcard hcard--tall" data-cursor="view">
+            <button class="card__media" type="button" aria-label="Open photo: Blossom Hill">
+              <img src="assets/img/cards/k5.webp" alt="Pink cherry blossom trees in soft light" width="501" height="452" loading="lazy" decoding="async" />
+              <span class="card__glare" aria-hidden="true"></span>
+            </button>
+            <figcaption class="card__cap"><span class="card__no">17</span><span class="card__title">Blossom Hill</span><span class="card__meta">Nature</span></figcaption>
+          </figure>
+
+          <figure class="card card--glass hcard hcard--wide" data-cursor="view">
+            <button class="card__media" type="button" aria-label="Open photo: Hanami, full frame">
+              <img src="assets/img/cards/k6.webp" alt="Full frame: woman in a white coat under cherry blossoms with a dove" width="1100" height="619" loading="lazy" decoding="async" />
+              <span class="card__glare" aria-hidden="true"></span>
+            </button>
+            <figcaption class="card__cap"><span class="card__no">18</span><span class="card__title">Hanami</span><span class="card__meta">Full frame</span></figcaption>
+          </figure>
+
+          <div class="hscroll__end" aria-hidden="true"><span>Next — The Album</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Transition spacer: Hanami → The Album (whiteout, the notebook returns) -->
+    <div class="transit transit--4" id="t4" aria-hidden="true"></div>
+
+    <!-- ── 04 · THE ALBUM (photo 5) + contact ─────────────────────── -->
+    <section class="chapter chapter--album" id="album" data-chapter="4" aria-labelledby="albumTitle">
+      <div class="container">
+        <header class="chapter__head chapter__head--center">
+          <p class="eyebrow"><span class="eyebrow__dot"></span>Chapter IV — The Album</p>
+          <h2 class="chapter__title" id="albumTitle" data-split>A life <em>well-lived</em></h2>
+          <p class="chapter__lede">Every chapter, bound into one volume. Pick an album to open it.</p>
+        </header>
+
+        <div class="albums">
+          <figure class="card album" data-cursor="view">
+            <button class="card__media" type="button" aria-label="Open album: Vol. 00 Prologue">
+              <img src="assets/img/cards/a1.webp" alt="Album cover: glowing book among flying books" width="1100" height="614" loading="lazy" decoding="async" />
+              <span class="card__glare" aria-hidden="true"></span>
+            </button>
+            <figcaption class="card__cap"><span class="card__no">Vol. 00</span><span class="card__title">Prologue</span><span class="card__meta">24 frames</span></figcaption>
+          </figure>
+          <figure class="card album" data-cursor="view">
+            <button class="card__media" type="button" aria-label="Open album: Vol. 01 Golden Hour">
+              <img src="assets/img/cards/s6.webp" alt="Album cover: Golden Hour" width="1100" height="643" loading="lazy" decoding="async" />
+              <span class="card__glare" aria-hidden="true"></span>
+            </button>
+            <figcaption class="card__cap"><span class="card__no">Vol. 01</span><span class="card__title">Golden Hour</span><span class="card__meta">32 frames</span></figcaption>
+          </figure>
+          <figure class="card album" data-cursor="view">
+            <button class="card__media" type="button" aria-label="Open album: Vol. 02 Red Sun City">
+              <img src="assets/img/cards/r6.webp" alt="Album cover: Red Sun City" width="1100" height="619" loading="lazy" decoding="async" />
+              <span class="card__glare" aria-hidden="true"></span>
+            </button>
+            <figcaption class="card__cap"><span class="card__no">Vol. 02</span><span class="card__title">Red Sun City</span><span class="card__meta">28 frames</span></figcaption>
+          </figure>
+          <figure class="card album" data-cursor="view">
+            <button class="card__media" type="button" aria-label="Open album: Vol. 03 Hanami">
+              <img src="assets/img/cards/k6.webp" alt="Album cover: Hanami" width="1100" height="619" loading="lazy" decoding="async" />
+              <span class="card__glare" aria-hidden="true"></span>
+            </button>
+            <figcaption class="card__cap"><span class="card__no">Vol. 03</span><span class="card__title">Hanami</span><span class="card__meta">26 frames</span></figcaption>
+          </figure>
+          <figure class="card album album--feature" data-cursor="view">
+            <button class="card__media" type="button" aria-label="Open album: Vol. 04 JOSC Gallery">
+              <img src="assets/img/cards/a5.webp" alt="The JOSC Gallery notebook" width="551" height="645" loading="lazy" decoding="async" />
+              <span class="card__glare" aria-hidden="true"></span>
+            </button>
+            <figcaption class="card__cap"><span class="card__no">Vol. 04</span><span class="card__title">JOSC Gallery</span><span class="card__meta">18 frames</span></figcaption>
+          </figure>
+        </div>
+
+        <!-- Contact -->
+        <div class="contact glass" id="contact">
+          <p class="eyebrow"><span class="eyebrow__dot"></span>Epilogue — Your chapter</p>
+          <h2 class="contact__title" data-split>Let’s write the <em>next page</em>.</h2>
+          <p class="contact__lede">Portraits, editorials, fantasy concepts or a whole album for your story — booking sessions for late 2026.</p>
+          <div class="contact__actions">
+            <a class="btn btn--ink" href="mailto:hello@joscgallery.com" data-magnetic><span>hello@joscgallery.com</span></a>
+            <a class="btn btn--ghost" href="https://wa.me/620000000000" target="_blank" rel="noopener" data-magnetic><span>WhatsApp</span></a>
+          </div>
+        </div>
+      </div>
+
+      <footer class="footer container">
+        <p>© <span id="year">2026</span> JOSC Gallery — Bangil, East Java.</p>
+        <p class="mono">Built with HTML · CSS · Three.js · GSAP · Lenis</p>
+        <a href="#hero" data-scroll class="footer__top">Back to the first page ↑</a>
+      </footer>
+    </section>
+  </main>
+
+  <!-- ═════════════════════════════════════════════════════════════
+       LIGHTBOX
+       ═════════════════════════════════════════════════════════════ -->
+  <dialog class="lightbox" id="lightbox" aria-label="Photo viewer">
+    <div class="lightbox__inner">
+      <figure class="lightbox__figure">
+        <img class="lightbox__img" id="lbImg" src="" alt="" />
+        <figcaption class="lightbox__cap">
+          <span class="lightbox__no mono" id="lbNo">01 / 20</span>
+          <span class="lightbox__title" id="lbTitle">Title</span>
+          <span class="lightbox__meta" id="lbMeta">Meta</span>
+        </figcaption>
+      </figure>
+      <button class="lightbox__btn lightbox__btn--prev" id="lbPrev" type="button" aria-label="Previous photo">←</button>
+      <button class="lightbox__btn lightbox__btn--next" id="lbNext" type="button" aria-label="Next photo">→</button>
+      <button class="lightbox__close" id="lbClose" type="button" aria-label="Close viewer">Close ✕</button>
+    </div>
+  </dialog>
+
+  <noscript>
+    <style>.loader{display:none!important}html.is-loading{overflow:auto!important}.layer--hero{visibility:visible!important}</style>
+  </noscript>
+</body>
+</html>
